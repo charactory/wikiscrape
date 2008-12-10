@@ -12,7 +12,8 @@ require 'open-uri'
 #raw = Hpricot(open('http://en.wikipedia.org/wiki/Inverloch_(webcomic)'))
 #raw = Hpricot(open('/home/colin/Paris'))
 #raw = Hpricot(open('http://en.wikipedia.org/wiki/Inverloch'))
-raw = Hpricot(open('http://en.wikipedia.org/wiki/asjiajs'))
+#raw = Hpricot(open('http://en.wikipedia.org/wiki/asjiajs'))
+raw = Hpricot(open("http://en.wikipedia.org/wiki/Special:Search?search=#{keyword}&fulltext=Search"))
 #
 #
 #Chops off any content after Table of Contents
