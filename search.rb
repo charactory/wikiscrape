@@ -4,16 +4,7 @@ require 'rubygems'
 require 'hpricot'
 require 'open-uri'
 
-#raw = Hpricot(open("/home/colin/Mulesing"))
-#raw = Hpricot(open("/home/colin/wikipedia_test"))
-#raw = Hpricot(open("http://en.wikipedia.org/wiki/Perth,_Western_Australia"))
-#raw = Hpricot(open("http://en.wikipedia.org/wiki/OGRE"))
-#raw = Hpricot(open('http://en.wikipedia.org/wiki/Swan_River_(Western_Australia)'))
-#raw = Hpricot(open('http://en.wikipedia.org/wiki/Inverloch_(webcomic)'))
-#raw = Hpricot(open('/home/colin/Paris'))
-#raw = Hpricot(open('http://en.wikipedia.org/wiki/Inverloch'))
-#raw = Hpricot(open('http://en.wikipedia.org/wiki/asjiajs'))
-$keyword = "high school musical".gsub(" ", "+")
+$keyword = "ewan mcgregor".gsub(" ", "+")
 raw = Hpricot(open("http://en.wikipedia.org/wiki/Special:Search?search=#{$keyword}&fulltext=Search"))
 #
 #
@@ -40,9 +31,10 @@ s_entries.each_index do |x|
   print "#{x+1}: #{s_entries[x]}"
 end
 
-$selection = s_entries[gets.chomp!.to_i-1].chomp!.strip!.gsub(" ", "+").gsub("(", "%28").gsub(")", "%29")
-puts $selection
-search_selection = Hpricot(open("http://en.wikipedia.org/wiki/Special:Search?search=#{$selection}&fulltext=Search"))
+#$selection = s_entries[gets.chomp!.to_i-1].chomp!.strip!.gsub(" ", "+").gsub("(", "%28").gsub(")", "%29")
+$selection = s_entries[gets.chomp!.to_i-1].chomp!.strip!.gsub(" ", "_")
+#search_selection = Hpricot(open("http://en.wikipedia.org/wiki/Special:Search?search=#{$selection}&fulltext=Search"))
+search_selection = Hpricot(open("http://en.wikipedia.org/wiki/#{$selection}"))
 
 if search_selection.to_s.index('<table class="toc" id="toc" summary="Contents">') == nil
   wiki_results = search_selection
@@ -58,7 +50,8 @@ unless no_article_found.empty?
 end
 
 unless text_body.inner_text.index(/(.*)* can refer to:/)  #do not print content if disambig
-  text_body.inner_text.gsub!(/\[[\w\d]*\]/, "").each {|c| puts c}
+  #text_body.inner_text.gsub!(/\[[\w\d]*\]/, "").each {|c| puts c}
+  text_body.inner_text.each {|c| puts c}
 else
   #prints disambig information
   puts text_body.inner_text
