@@ -3,9 +3,9 @@
 require 'rubygems'
 require 'hpricot'
 require 'open-uri'
-
 #$selection = s_entries[gets.chomp!.to_i-1].chomp!.strip!.gsub(" ", "+").gsub("(", "%28").gsub(")", "%29")
-$keyword = "mulesing".gsub(" ", "+")
+$keyword = ARGV.join(" ").gsub(" ", "+")
+ARGV.clear
 $keyword.gsub('(', "%28").gsub(')', '%28')
 #$keyword.strip!.gsub!(" ", "+").gsub!("(", "%28").gsub!(")", "%29")
 raw = Hpricot(open("http://en.wikipedia.org/wiki/Special:Search?search=#{$keyword}&fulltext=Search"))
@@ -34,7 +34,10 @@ s_entries.each_index do |x|
   print "#{x+1}: #{s_entries[x]}"
 end
 
-$selection = s_entries[gets.chomp!.to_i-1].chomp!.strip!.gsub(" ", "_")
+puts "Type in the entry number:"
+
+$number = gets.chomp!.to_i-1
+$selection = s_entries[$number].chomp!.strip!.gsub(" ", "_")
 #search_selection = Hpricot(open("http://en.wikipedia.org/wiki/Special:Search?search=#{$selection}&fulltext=Search"))
 search_selection = Hpricot(open("http://en.wikipedia.org/wiki/#{$selection}"))
 
@@ -44,7 +47,9 @@ else
   wiki_results = Hpricot(search_selection.to_s.slice(1..search_selection.to_s.index('<table class="toc" id="toc" summary="Contents">')))
 end
 
-text_body = (wiki_results/"#bodyContent/p")
+(wiki_results/"table.infobox").remove
+text_body = (wiki_results/"#bodyContent")
+text_body = (text_body/"p/:not(#coordinates)")
 
 no_article_found = (wiki_results/"div.noarticletext")
 unless no_article_found.empty?
@@ -52,7 +57,7 @@ unless no_article_found.empty?
 end
 
 unless text_body.inner_text.index(/(.*)* can refer to:/)  #do not print content if disambig
-  text_body.inner_text.gsub(/\[[\w\d]?\]/, "").each {|c| puts c}
+  text_body.inner_text.gsub(/\[[\w\d]{0,3}\]/, "").each {|c| puts c}
   #text_body.inner_text.each {|c| puts c}
 else
   #prints disambig information
