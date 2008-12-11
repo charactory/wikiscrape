@@ -8,20 +8,31 @@ class Wikiscraper
 
   def initialize(arguments)
     #ARGV needs to be cleared else it ends up in 'gets'
+    substitutions = [[' ', '+'], ['(', '%28'], [')' '%29']]
     @keyword = arguments.join(" ").gsub(" ", "+")
     arguments.clear
-    @keyword.gsub('(', "%28").gsub(')', '%28')
+    @keyword.gsub('(', "%28").gsub(')', '%29')
     
     @s_entries = []
     @search_links = []
+
+    @search_uri = "http://en.wikipedia.org/wiki/Special:Search?search=#{@keyword}&fulltext=Search"
 
     @toc_string = '<table class="toc" id="toc" summary="Contents">'
 
   end
 
+  def main
+    process_search
+    populate_arrays
+    get_selection
+    chop_toc
+    final_page_processing
+  end
+
   #open our search
   def process_search
-    raw = Hpricot(open("http://en.wikipedia.org/wiki/Special:Search?search=#{@keyword}&fulltext=Search"))
+    raw = Hpricot(open(@search_uri))
 
     #Chops off any content after Table of Contents
     if raw.to_s.index(@toc_string) == nil
@@ -50,36 +61,37 @@ class Wikiscraper
   def get_selection
     puts "\nType in a entry number:"
     @number = gets.chomp!.to_i-1
-    search_selection = Hpricot(open(search_links[@number]))
+    @search_selection = Hpricot(open(@search_links[@number]))
   end
 
   def chop_toc
-    if search_selection.to_s.index(@toc_string) == nil
-      wiki_results = search_selection
+    if @search_selection.to_s.index(@toc_string) == nil
+      @wiki_results = @search_selection
     else
-      wiki_results = Hpricot(search_selection.to_s.slice(1..search_selection.to_s.index(@toc_string)))
+      @wiki_results = Hpricot(@search_selection.to_s.slice(1..@search_selection.to_s.index(@toc_string)))
     end
   end
 
-  (wiki_results/"table.infobox").remove
-  text_body = (wiki_results/"#bodyContent")
-  text_body = (text_body/"p/:not(#coordinates)")
-
-  no_article_found = (wiki_results/"div.noarticletext")
-
   def final_page_processing
+    
+  (@wiki_results/"table.infobox").remove
+  @text_body = (@wiki_results/"#bodyContent")
+  @text_body = (@text_body/"p/:not(#coordinates)")
+
+  no_article_found = (@wiki_results/"div.noarticletext")
+
     if not no_article_found.empty?
       puts no_article_found.inner_text
     else
-      if not text_body.inner_text.index(/(.*)* can refer to:/)
-        puts((wiki_results/"div.dablink").inner_text) #disambig info
+      if not @text_body.inner_text.index(/(.*)* can refer to:/)
+        puts((@wiki_results/"div.dablink").inner_text) #disambig info
         puts "\n"
-        text_body.inner_text.gsub(/\[[\w\d]{0,3}\]/, "").each {|c| puts c}
+        @text_body.inner_text.gsub(/\[[\w\d]{0,3}\]/, "").each {|c| puts c}
       else
         #prints disambig information
-        puts text_body.inner_text
+        puts @text_body.inner_text
         puts "\n"
-        links = (wiki_results/"li")
+        links = (@wiki_results/"li")
         links.each {|link| puts link.inner_text} if not links.empty?
       end
     end
@@ -89,3 +101,4 @@ end
 
 
 scrape = Wikiscraper.new(ARGV)
+scrape.main
