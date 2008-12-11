@@ -1,4 +1,7 @@
 #!/usr/bin/ruby -w
+# Wikiscraper
+# written by mentallaxative
+#
 
 require 'rubygems'
 require 'hpricot'
@@ -8,18 +11,12 @@ class Wikiscraper
 
   def initialize(arguments)
     #ARGV needs to be cleared else it ends up in 'gets'
-    substitutions = [[' ', '+'], ['(', '%28'], [')' '%29']]
-    @keyword = arguments.join(" ").gsub(" ", "+")
+    @keyword = arguments.join(" ")
+    substitutions = {' ' => '+', '(' => '%28', ')' => '%29'}
+    substitutions.each_pair {|a,b| @keyword.gsub!(a, b) }
     arguments.clear
-    @keyword.gsub('(', "%28").gsub(')', '%29')
     
-    @s_entries = []
     @search_links = []
-
-    @search_uri = "http://en.wikipedia.org/wiki/Special:Search?search=#{@keyword}&fulltext=Search"
-
-    @toc_string = '<table class="toc" id="toc" summary="Contents">'
-
   end
 
   def main
@@ -31,7 +28,8 @@ class Wikiscraper
 
   #open our search
   def process_search
-    @s_page = Hpricot(open(@search_uri))
+    search_uri = "http://en.wikipedia.org/wiki/Special:Search?search=#{@keyword}&fulltext=Search"
+    @s_page = Hpricot(open(search_uri))
   end
 
   def populate_arrays
@@ -43,26 +41,28 @@ class Wikiscraper
       @search_links << ah.attributes['href'].sub!('/wiki/', 'http://en.wikipedia.org/wiki/') 
     end
 
-    results_data.each_line {|x| @s_entries << "#{x}\r"}
+    s_entries = []
+    results_data.each_line {|x| s_entries << "#{x}\r"}
     #print out the search results
-    @s_entries.each_index {|x| print "#{x+1}: #{@s_entries[x]}"}
+    s_entries.each_index {|x| print "#{x+1}: #{s_entries[x]}"}
   end
 
   def get_selection
+    toc_string = '<table class="toc" id="toc" summary="Contents">'
+
     puts "\nType in a entry number:"
     @number = gets.chomp!.to_i-1
-    @search_selection = Hpricot(open(@search_links[@number]))
+    selection = Hpricot(open(@search_links[@number]))
 
     #gets rid of everything after the table of contents
-    if @search_selection.to_s.index(@toc_string) == nil
-      @wiki_results = @search_selection
+    if selection.to_s.index(toc_string) == nil
+      @wiki_results = selection
     else
-      @wiki_results = Hpricot(@search_selection.to_s.slice(1..@search_selection.to_s.index(@toc_string)))
+      @wiki_results = Hpricot(selection.to_s.slice(1..selection.to_s.index(toc_string)))
     end
   end
 
   def final_page_processing
-    
     (@wiki_results/"table.infobox").remove
     @text_body = (@wiki_results/"#bodyContent/p/:not(#coordinates)")
 
@@ -73,9 +73,9 @@ class Wikiscraper
     else
       puts((@wiki_results/"div.dablink").inner_text) #disambig info
       puts "\n"
+      #get rid of citation marks like [1], [3], [12]
       @text_body.inner_text.gsub(/\[[\w\d]{0,3}\]/, "").each {|c| puts c}
     end
-
   end
 
 end
