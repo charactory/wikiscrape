@@ -3,11 +3,10 @@
 require 'rubygems'
 require 'hpricot'
 require 'open-uri'
-#$selection = s_entries[gets.chomp!.to_i-1].chomp!.strip!.gsub(" ", "+").gsub("(", "%28").gsub(")", "%29")
+
 $keyword = ARGV.join(" ").gsub(" ", "+")
 ARGV.clear
 $keyword.gsub('(', "%28").gsub(')', '%28')
-#$keyword.strip!.gsub!(" ", "+").gsub!("(", "%28").gsub!(")", "%29")
 raw = Hpricot(open("http://en.wikipedia.org/wiki/Special:Search?search=#{$keyword}&fulltext=Search"))
 #
 #
@@ -22,7 +21,16 @@ end
 disambig = (wiki/"div.dablink")
 bod = (wiki/"#bodyContent")
 
+#search is an array of search result names
 search = (wiki/"ul.mw-search-results/li/:not(div.mw-search-result-data)").inner_text
+
+#search_links is an array of links of search results
+search_links = []
+
+(wiki/"ul.mw-search-results"/:a).each do |ah|
+  links = ah.attributes['href'].sub!('/wiki/', 'http://en.wikipedia.org/wiki/')
+  search_links << links 
+end
 
 s_entries = []
 
@@ -34,12 +42,10 @@ s_entries.each_index do |x|
   print "#{x+1}: #{s_entries[x]}"
 end
 
-puts "Type in the entry number:"
+puts "\nType in a entry number:"
 
 $number = gets.chomp!.to_i-1
-$selection = s_entries[$number].chomp!.strip!.gsub(" ", "_")
-#search_selection = Hpricot(open("http://en.wikipedia.org/wiki/Special:Search?search=#{$selection}&fulltext=Search"))
-search_selection = Hpricot(open("http://en.wikipedia.org/wiki/#{$selection}"))
+search_selection = Hpricot(open(search_links[$number]))
 
 if search_selection.to_s.index('<table class="toc" id="toc" summary="Contents">') == nil
   wiki_results = search_selection
@@ -54,16 +60,15 @@ text_body = (text_body/"p/:not(#coordinates)")
 no_article_found = (wiki_results/"div.noarticletext")
 unless no_article_found.empty?
   puts no_article_found.inner_text
-end
-
-unless text_body.inner_text.index(/(.*)* can refer to:/)  #do not print content if disambig
-  text_body.inner_text.gsub(/\[[\w\d]{0,3}\]/, "").each {|c| puts c}
-  #text_body.inner_text.each {|c| puts c}
 else
-  #prints disambig information
-  puts text_body.inner_text
-  puts "\n"
-  links = (bod/"li")
-  links.each {|link| puts link.inner_text} unless links.empty?
+  unless text_body.inner_text.index(/(.*)* can refer to:/)  #do not print content if disambig
+    text_body.inner_text.gsub(/\[[\w\d]{0,3}\]/, "").each {|c| puts c}
+  else
+    #prints disambig information
+    puts text_body.inner_text
+    puts "\n"
+    links = (bod/"li")
+    links.each {|link| puts link.inner_text} unless links.empty?
+  end
 end
 
