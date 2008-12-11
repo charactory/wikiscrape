@@ -26,35 +26,25 @@ class Wikiscraper
     process_search
     populate_arrays
     get_selection
-    chop_toc
     final_page_processing
   end
 
   #open our search
   def process_search
-    raw = Hpricot(open(@search_uri))
-
-    #Chops off any content after Table of Contents
-    if raw.to_s.index(@toc_string) == nil
-      @s_page = raw
-    else
-      @s_page = Hpricot(raw.to_s.slice(1..raw.to_s.index(@toc_string)))
-    end
+    @s_page = Hpricot(open(@search_uri))
   end
 
   def populate_arrays
-    #search is an array of search result names
-    @search = (@s_page/"ul.mw-search-results/li/:not(div.mw-search-result-data)").inner_text
+    #results_data contains all search result names
+    results_data = (@s_page/"ul.mw-search-results/li/:not(div.mw-search-result-data)").inner_text
 
     #search_links is an array of links of search results
-
     (@s_page/"ul.mw-search-results"/:a).each do |ah|
-      links = ah.attributes['href'].sub!('/wiki/', 'http://en.wikipedia.org/wiki/')
-      @search_links << links 
+      @search_links << ah.attributes['href'].sub!('/wiki/', 'http://en.wikipedia.org/wiki/') 
     end
 
-    @search.each_line {|x| @s_entries << "#{x}\r"}
-
+    results_data.each_line {|x| @s_entries << "#{x}\r"}
+    #print out the search results
     @s_entries.each_index {|x| print "#{x+1}: #{@s_entries[x]}"}
   end
 
@@ -62,9 +52,8 @@ class Wikiscraper
     puts "\nType in a entry number:"
     @number = gets.chomp!.to_i-1
     @search_selection = Hpricot(open(@search_links[@number]))
-  end
 
-  def chop_toc
+    #gets rid of everything after the table of contents
     if @search_selection.to_s.index(@toc_string) == nil
       @wiki_results = @search_selection
     else
@@ -74,27 +63,19 @@ class Wikiscraper
 
   def final_page_processing
     
-  (@wiki_results/"table.infobox").remove
-  @text_body = (@wiki_results/"#bodyContent")
-  @text_body = (@text_body/"p/:not(#coordinates)")
+    (@wiki_results/"table.infobox").remove
+    @text_body = (@wiki_results/"#bodyContent/p/:not(#coordinates)")
 
-  no_article_found = (@wiki_results/"div.noarticletext")
+    no_article_found = (@wiki_results/"div.noarticletext")
 
     if not no_article_found.empty?
       puts no_article_found.inner_text
     else
-      if not @text_body.inner_text.index(/(.*)* can refer to:/)
-        puts((@wiki_results/"div.dablink").inner_text) #disambig info
-        puts "\n"
-        @text_body.inner_text.gsub(/\[[\w\d]{0,3}\]/, "").each {|c| puts c}
-      else
-        #prints disambig information
-        puts @text_body.inner_text
-        puts "\n"
-        links = (@wiki_results/"li")
-        links.each {|link| puts link.inner_text} if not links.empty?
-      end
+      puts((@wiki_results/"div.dablink").inner_text) #disambig info
+      puts "\n"
+      @text_body.inner_text.gsub(/\[[\w\d]{0,3}\]/, "").each {|c| puts c}
     end
+
   end
 
 end
