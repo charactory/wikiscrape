@@ -4,6 +4,7 @@ require 'rubygems'
 require 'hpricot'
 require 'open-uri'
 
+
 #ARGV needs to be cleared else it ends up in 'gets'
 $keyword = ARGV.join(" ").gsub(" ", "+")
 ARGV.clear
@@ -19,9 +20,6 @@ if raw.to_s.index('<table class="toc" id="toc" summary="Contents">') == nil
 else
   wiki = Hpricot(raw.to_s.slice(1..raw.to_s.index('<table class="toc" id="toc" summary="Contents">')))
 end
-
-disambig = (wiki/"div.dablink")
-bod = (wiki/"#bodyContent")
 
 #search is an array of search result names
 search = (wiki/"ul.mw-search-results/li/:not(div.mw-search-result-data)").inner_text
@@ -60,7 +58,9 @@ no_article_found = (wiki_results/"div.noarticletext")
 unless no_article_found.empty?
   puts no_article_found.inner_text
 else
-  unless text_body.inner_text.index(/(.*)* can refer to:/)  #do not print content if disambig
+  unless text_body.inner_text.index(/(.*)* can refer to:/)
+    puts((wiki_results/"div.dablink").inner_text) #disambig info
+    puts "\n"
     text_body.inner_text.gsub(/\[[\w\d]{0,3}\]/, "").each {|c| puts c}
   else
     #prints disambig information
