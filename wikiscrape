@@ -1,7 +1,8 @@
-#!/usr/bin/ruby -w
+#!/usr/bin/env ruby
 # Wikiscraper
 # written by mentallaxative
 #
+#remove "require 'rubygems'" if you did not install hpricot with rubygems
 
 require 'rubygems'
 require 'hpricot'
@@ -80,6 +81,9 @@ class Wikiscraper
 
 end
 
-
-scrape = Wikiscraper.new(ARGV)
-scrape.main
+if ARGV.empty?
+  puts "Please supply a subject to search Wikipedia for."
+else
+  scrape = Wikiscraper.new(ARGV)
+  scrape.main
+end
