@@ -14,6 +14,9 @@ class Wikiscraper
     
     @s_entries = []
     @search_links = []
+
+    @toc_string = '<table class="toc" id="toc" summary="Contents">'
+
   end
 
   #open our search
@@ -21,37 +24,41 @@ class Wikiscraper
     raw = Hpricot(open("http://en.wikipedia.org/wiki/Special:Search?search=#{@keyword}&fulltext=Search"))
 
     #Chops off any content after Table of Contents
-    if raw.to_s.index('<table class="toc" id="toc" summary="Contents">') == nil
-    wiki = raw
+    if raw.to_s.index(@toc_string) == nil
+      @s_page = raw
     else
-      wiki = Hpricot(raw.to_s.slice(1..raw.to_s.index('<table class="toc" id="toc" summary="Contents">')))
+      @s_page = Hpricot(raw.to_s.slice(1..raw.to_s.index(@toc_string)))
     end
   end
 
-  #search is an array of search result names
-  search = (wiki/"ul.mw-search-results/li/:not(div.mw-search-result-data)").inner_text
+  def populate_arrays
+    #search is an array of search result names
+    @search = (@s_page/"ul.mw-search-results/li/:not(div.mw-search-result-data)").inner_text
 
-  #search_links is an array of links of search results
+    #search_links is an array of links of search results
 
-  (wiki/"ul.mw-search-results"/:a).each do |ah|
-    links = ah.attributes['href'].sub!('/wiki/', 'http://en.wikipedia.org/wiki/')
-    @search_links << links 
+    (@s_page/"ul.mw-search-results"/:a).each do |ah|
+      links = ah.attributes['href'].sub!('/wiki/', 'http://en.wikipedia.org/wiki/')
+      @search_links << links 
+    end
+
+    @search.each_line {|x| @s_entries << "#{x}\r"}
+
+    @s_entries.each_index {|x| print "#{x+1}: #{@s_entries[x]}"}
   end
 
+  def get_selection
+    puts "\nType in a entry number:"
+    @number = gets.chomp!.to_i-1
+    search_selection = Hpricot(open(search_links[@number]))
+  end
 
-  search.each_line {|x| s_entries << "#{x}\r"}
-
-  s_entries.each_index {|x| print "#{x+1}: #{s_entries[x]}"}
-
-  puts "\nType in a entry number:"
-
-  $number = gets.chomp!.to_i-1
-  search_selection = Hpricot(open(search_links[$number]))
-
-  if search_selection.to_s.index('<table class="toc" id="toc" summary="Contents">') == nil
-    wiki_results = search_selection
-  else
-    wiki_results = Hpricot(search_selection.to_s.slice(1..search_selection.to_s.index('<table class="toc" id="toc" summary="Contents">')))
+  def chop_toc
+    if search_selection.to_s.index(@toc_string) == nil
+      wiki_results = search_selection
+    else
+      wiki_results = Hpricot(search_selection.to_s.slice(1..search_selection.to_s.index(@toc_string)))
+    end
   end
 
   (wiki_results/"table.infobox").remove
@@ -60,20 +67,25 @@ class Wikiscraper
 
   no_article_found = (wiki_results/"div.noarticletext")
 
-  unless no_article_found.empty?
-    puts no_article_found.inner_text
-  else
-    unless text_body.inner_text.index(/(.*)* can refer to:/)
-      puts((wiki_results/"div.dablink").inner_text) #disambig info
-      puts "\n"
-      text_body.inner_text.gsub(/\[[\w\d]{0,3}\]/, "").each {|c| puts c}
+  def final_page_processing
+    if not no_article_found.empty?
+      puts no_article_found.inner_text
     else
-      #prints disambig information
-      puts text_body.inner_text
-      puts "\n"
-      links = (wiki_results/"li")
-      links.each {|link| puts link.inner_text} unless links.empty?
+      if not text_body.inner_text.index(/(.*)* can refer to:/)
+        puts((wiki_results/"div.dablink").inner_text) #disambig info
+        puts "\n"
+        text_body.inner_text.gsub(/\[[\w\d]{0,3}\]/, "").each {|c| puts c}
+      else
+        #prints disambig information
+        puts text_body.inner_text
+        puts "\n"
+        links = (wiki_results/"li")
+        links.each {|link| puts link.inner_text} if not links.empty?
+      end
     end
   end
 
 end
+
+
+scrape = Wikiscraper.new(ARGV)
