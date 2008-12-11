@@ -4,14 +4,16 @@ require 'rubygems'
 require 'hpricot'
 require 'open-uri'
 
+#ARGV needs to be cleared else it ends up in 'gets'
 $keyword = ARGV.join(" ").gsub(" ", "+")
 ARGV.clear
 $keyword.gsub('(', "%28").gsub(')', '%28')
+
+#open our search
 raw = Hpricot(open("http://en.wikipedia.org/wiki/Special:Search?search=#{$keyword}&fulltext=Search"))
 #
 #
 #Chops off any content after Table of Contents
-
 if raw.to_s.index('<table class="toc" id="toc" summary="Contents">') == nil
   wiki = raw
 else
@@ -34,13 +36,9 @@ end
 
 s_entries = []
 
-search.each_line do |x|
-  s_entries << "#{x}\r"
-end
+search.each_line {|x| s_entries << "#{x}\r"}
 
-s_entries.each_index do |x|
-  print "#{x+1}: #{s_entries[x]}"
-end
+s_entries.each_index {|x| print "#{x+1}: #{s_entries[x]}"}
 
 puts "\nType in a entry number:"
 
@@ -58,6 +56,7 @@ text_body = (wiki_results/"#bodyContent")
 text_body = (text_body/"p/:not(#coordinates)")
 
 no_article_found = (wiki_results/"div.noarticletext")
+
 unless no_article_found.empty?
   puts no_article_found.inner_text
 else
@@ -67,7 +66,7 @@ else
     #prints disambig information
     puts text_body.inner_text
     puts "\n"
-    links = (bod/"li")
+    links = (wiki_results/"li")
     links.each {|link| puts link.inner_text} unless links.empty?
   end
 end
